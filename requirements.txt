@@ -1,0 +1,8 @@
+aiogram<3.0
+environs~=8.0.0
+-f https://download.pytorch.org/whl/torch_stable.html
+torch~=1.10.2+cpu
+torchvision~=0.11.3+cpu
+pillow~=8.4.0
+emoji~=1.6.3
+asyncio~=3.4.3
