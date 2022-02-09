@@ -24,8 +24,6 @@ class Model:
 
     def get_style_model_and_losses(self):
         cnn = deepcopy(self.cnn)
-        del vgg19
-        gc.collect()
 
         # normalization module
         normalization = Normalization()
