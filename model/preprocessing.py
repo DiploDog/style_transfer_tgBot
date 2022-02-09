@@ -18,7 +18,7 @@ class Preprocessing:
         image = Image.open(self.img)
         image = loader(image).unsqueeze(0)
         del loader
-        gc collect()
+        gc.collect()
         return image.to(torch.float)
 
     def _get_filename(self):
