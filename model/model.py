@@ -16,8 +16,6 @@ class Model:
     cnn = vgg19(pretrained=True).features
 
     def __init__(self, content_image, style_image, style_weight=10000, content_weight=0.1, num_steps=50):
-        del vgg19
-        gc.collect()
         self.content_image = content_image
         self.style_image = style_image
         self.style_weight = style_weight
@@ -26,6 +24,8 @@ class Model:
 
     def get_style_model_and_losses(self):
         cnn = deepcopy(self.cnn)
+        del vgg19
+        gc.collect()
 
         # normalization module
         normalization = Normalization()
