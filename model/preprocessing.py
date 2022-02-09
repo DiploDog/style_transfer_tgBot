@@ -1,3 +1,4 @@
+import gc
 import torchvision.transforms as transforms
 from PIL import Image
 import torch
@@ -16,6 +17,8 @@ class Preprocessing:
             transforms.ToTensor()])
         image = Image.open(self.img)
         image = loader(image).unsqueeze(0)
+        del loader
+        gc collect()
         return image.to(torch.float)
 
     def _get_filename(self):

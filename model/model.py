@@ -64,6 +64,9 @@ class Model:
                 content_loss = ContentLoss(target)
                 model.add_module("content_loss_{}".format(i), content_loss)
                 content_losses.append(content_loss)
+                del target
+                del content_loss
+                gc.collect()
 
             if name in self.style_layers:
                 # add style loss:
@@ -71,6 +74,9 @@ class Model:
                 style_loss = StyleLoss(target_feature)
                 model.add_module("style_loss_{}".format(i), style_loss)
                 style_losses.append(style_loss)
+                del style_loss
+                del target_feature
+                gc.collect()
 
         # now we trim off the layers after the last content and style losses
         # выбрасываем все уровни после последенего styel loss или content loss
@@ -130,8 +136,9 @@ class Model:
                     print('Style Loss : {:4f} Content Loss: {:4f}'.format(
                         style_score.item(), content_score.item()))
                     print()
-
+                gc.collect()
                 return style_score + content_score
+
             gc.collect()
             optimizer.step(closure)
 
