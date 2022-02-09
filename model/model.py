@@ -1,3 +1,4 @@
+import gc
 from torchvision.models import vgg19
 from copy import deepcopy
 from model.Normalization import Normalization
@@ -15,6 +16,8 @@ class Model:
     cnn = vgg19(pretrained=True).features
 
     def __init__(self, content_image, style_image, style_weight=10000, content_weight=0.1, num_steps=50):
+        del vgg19
+        gc.collect()
         self.content_image = content_image
         self.style_image = style_image
         self.style_weight = style_weight
@@ -78,6 +81,8 @@ class Model:
                 break
 
         model = model[:(i + 1)]
+        del cnn
+        gc.collect()
 
         return model, style_losses, content_losses
 
@@ -129,7 +134,7 @@ class Model:
                     print()
 
                 return style_score + content_score
-
+            gc.collect()
             optimizer.step(closure)
 
         input_image.data.clamp_(0, 1)
