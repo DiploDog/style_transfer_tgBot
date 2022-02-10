@@ -6,3 +6,4 @@ pillow~=8.4.0
 emoji~=1.6.3
 asyncio~=3.4.3
 environs==8.0.0
+python-resources==0.3
