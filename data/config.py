@@ -1,10 +1,12 @@
 from environs import Env
 
-# Теперь используем вместо библиотеки python-dotenv библиотеку environs
 env = Env()
 env.read_env()
 
-BOT_TOKEN = env.str("BOT_TOKEN")  # Забираем значение типа str
-ADMINS = env.list("ADMINS")  # Тут у нас будет список из админов
-#IP = env.str("ip")  # Тоже str, но для айпи адреса хоста
-
+BOT_TOKEN = env.str("BOT_TOKEN")
+ADMINS = env.list("ADMINS")
+WEBHOOK_HOST = env.str("WEBHOOK_HOST")
+WEBHOOK_PATH = env.str("WEBHOOK_PATH")
+WEBHOOK_URL = env.str("WEBHOOK_URL")
+WEBAPP_HOST = env.str("WEBAPP_HOST")
+WEBAPP_PORT = 3001

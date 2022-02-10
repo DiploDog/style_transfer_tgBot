@@ -1,6 +1,5 @@
 -f https://download.pytorch.org/whl/torch_stable.html
 aiogram<3.0
-environs~=8.0.0
 torch==1.10.2+cpu
 torchvision==0.11.3+cpu
 pillow~=8.4.0
