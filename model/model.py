@@ -137,7 +137,7 @@ class GatysTransfer(object):
                 if abs(1 - k) > eps:
                     self.prev_score = style_score_val
                 else:
-                    self.step = 1e10
+                    self.step = int(1e10)
 
             return loss
 
@@ -150,10 +150,11 @@ class GatysTransfer(object):
 
         input_img = self.content_img.clone().detach()
         # this line to show that input is a parameter that requires a gradient
-        optimizer = LBFGS([input_img.requires_grad_()])
+        optimizer = LBFGS([input_img.requires_grad_()], max_iter=5)
 
         self.step = 1
         while self.step < num_steps:
+            print(self.step)
             optimizer.step(closure)
 
         # a last correction...
