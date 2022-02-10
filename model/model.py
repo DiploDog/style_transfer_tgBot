@@ -128,7 +128,6 @@ class Model:
             loss = style_score + content_score
             loss.backward()
 
-            print("run {}:".format(self.run))
             print('Style Loss : {:4f} Content Loss: {:4f}'.format(
                 style_score.item(), content_score.item()))
             print()
@@ -136,9 +135,10 @@ class Model:
             return style_score + content_score
 
         print('Optimizing..')
-        while self.run <= self.num_steps:
+        self.run = 1
+        while self.run <= self.num_steps + 1:
 
-            gc.collect()
+            print("run {}:".format(self.run - 1))
             optimizer.step(closure)
             self.run += 1
 
