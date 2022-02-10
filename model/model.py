@@ -150,7 +150,7 @@ class GatysTransfer(object):
 
         input_img = self.content_img.clone().detach()
         # this line to show that input is a parameter that requires a gradient
-        optimizer = LBFGS([input_img.requires_grad_()], max_iter=5)
+        optimizer = LBFGS([input_img.requires_grad_()], max_iter=1)
 
         self.step = 1
         while self.step < num_steps:
