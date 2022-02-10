@@ -5,4 +5,4 @@ torchvision==0.11.3+cpu
 pillow~=8.4.0
 emoji~=1.6.3
 asyncio~=3.4.3
-environs=8.0.0
+environs==8.0.0
