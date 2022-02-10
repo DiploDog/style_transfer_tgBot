@@ -15,7 +15,7 @@ class Model:
     style_layers = ['conv_1', 'conv_2', 'conv_3', 'conv_4', 'conv_5']
     cnn = vgg19(pretrained=True).features
 
-    def __init__(self, content_image, style_image, style_weight=100000, content_weight=0.1, num_steps: int = 20):
+    def __init__(self, content_image, style_image, style_weight=10000, content_weight=0.1, num_steps: int = 20):
         self.content_image = content_image
         self.style_image = style_image
         self.style_weight = style_weight
@@ -128,7 +128,6 @@ class Model:
             loss = style_score + content_score
             loss.backward()
 
-            self.run += 1
             print("run {}:".format(self.run))
             print('Style Loss : {:4f} Content Loss: {:4f}'.format(
                 style_score.item(), content_score.item()))
@@ -141,6 +140,7 @@ class Model:
 
             gc.collect()
             optimizer.step(closure)
+            self.run += 1
 
         input_image.data.clamp_(0, 1)
         return input_image
