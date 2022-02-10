@@ -1,21 +1,20 @@
+import torch
 from torchvision import transforms
-from model.model import Model
+from model.model import GatysNet, GatysTransfer
 from model.preprocessing import Preprocessing
-import gc
 
 
-def run(content_image, style_image):
+def run(content_image, style_image, num_steps=100):
     style_img = Preprocessing(imsize=512, img=style_image)  # as well as here
     content_img = Preprocessing(imsize=512, img=content_image)
     tens_content = content_img.image_loader()
-    del content_image
     tens_style = style_img.image_loader()
-    del style_image
     input_img = tens_content.clone()
-    my_model = Model(tens_content, tens_style)
-    pic = my_model.run_style_transfer(input_img)
-    del my_model
-    gc.collect()
+    my_model = GatysNet()
+    my_model.load_state_dict(torch.load('model/Gatys.model'))
+    transfer = GatysTransfer(my_model.features.eval())
+    transfer.build_model(tens_content, tens_style)
+    pic = transfer.run(num_steps)
     pic = pic.squeeze(0)
     unloader = transforms.ToPILImage()
     pic = unloader(pic)

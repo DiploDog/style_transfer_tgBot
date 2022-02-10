@@ -1,148 +1,162 @@
-import gc
-from torchvision.models import vgg19
-from copy import deepcopy
+from collections import OrderedDict
 from model.Normalization import Normalization
-from torch.optim import LBFGS
 from model.STLoss import ContentLoss, StyleLoss
+from copy import deepcopy
 import torch.nn as nn
+from torch.optim import LBFGS
 import warnings
+
 warnings.simplefilter('ignore', UserWarning)
 
 
-class Model:
+class GatysNet(nn.Module):
+    """The Gatys-Net"""
 
-    content_layers = ['conv_4']
-    style_layers = ['conv_1', 'conv_2', 'conv_3', 'conv_4', 'conv_5']
-    cnn = vgg19(pretrained=True).features
+    def __init__(self):
+        super(GatysNet, self).__init__()
 
-    def __init__(self, content_image, style_image, style_weight=10000, content_weight=0.1, num_steps=0):
-        self.content_image = content_image
-        self.style_image = style_image
-        self.style_weight = style_weight
-        self.content_weight = content_weight
-        self.num_steps = num_steps
+        self.features = nn.Sequential(OrderedDict([
+            ("conv_1", nn.Conv2d(3, 64, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))),
+            ("relu_1", nn.ReLU(inplace=False)),
+            ("conv_2", nn.Conv2d(64, 64, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))),
+            ("relu_2", nn.ReLU(inplace=False)),
+            ("pool_2", nn.MaxPool2d(kernel_size=2, stride=2, padding=0, dilation=1, ceil_mode=False)),
+            ("conv_3", nn.Conv2d(64, 128, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))),
+            ("relu_3", nn.ReLU(inplace=False)),
+            ("conv_4", nn.Conv2d(128, 128, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))),
+            ("relu_4", nn.ReLU(inplace=False)),
+            ("pool_4", nn.MaxPool2d(kernel_size=2, stride=2, padding=0, dilation=1, ceil_mode=False)),
+            ("conv_5", nn.Conv2d(128, 256, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1)))
+        ]))
 
-    def get_style_model_and_losses(self):
-        cnn = deepcopy(self.cnn)
+    def forward(self, input):
+        return self.features(input)
 
+
+class GatysTransfer(object):
+    def __init__(self, cnn):
+        super(GatysTransfer, self).__init__()
+
+        self.cnn = cnn
         # normalization module
-        normalization = Normalization()
+        self.normalization = Normalization()
 
-        # just in order to have an iterable access to or list of content/syle
-        # losses
-        content_losses = []
-        style_losses = []
+        self.content_layers = ("conv_4",)
+        self.style_layers = ("conv_1", "conv_2", "conv_3", "conv_4", "conv_5")
+
+        self.model = None
+        self.step = 0
+
+        self.content_img = None
+        self.style_img = None
+
+        self.content_losses = []
+        self.style_losses = []
+
+        self.prev_score = None
+
+    def build_model(self, content_img, style_img):
+        self.content_img = content_img
+        self.style_img = style_img
+
+        # just in order to have an iterable access to list of content/style losses
+        self.content_losses.clear()
+        self.style_losses.clear()
+
+        cnn = deepcopy(self.cnn)
 
         # assuming that cnn is a nn.Sequential, so we make a new nn.Sequential
         # to put in modules that are supposed to be activated sequentially
-        model = nn.Sequential(normalization)
+        model = nn.Sequential(self.normalization)
 
         i = 0  # increment every time we see a conv
         for layer in cnn.children():
             if isinstance(layer, nn.Conv2d):
                 i += 1
-                name = 'conv_{}'.format(i)
+                name = "conv_{}".format(i)
             elif isinstance(layer, nn.ReLU):
-                name = 'relu_{}'.format(i)
-                # The in-place version doesn't play very nicely with the ContentLoss
-                # and StyleLoss we insert below. So we replace with out-of-place
-                # ones here.
-                # Переопределим relu уровень
-                layer = nn.ReLU(inplace=False)
+                name = "relu_{}".format(i)
             elif isinstance(layer, nn.MaxPool2d):
-                name = 'pool_{}'.format(i)
+                name = "pool_{}".format(i)
             elif isinstance(layer, nn.BatchNorm2d):
-                name = 'bn_{}'.format(i)
+                name = "bn_{}".format(i)
             else:
-                raise RuntimeError('Unrecognized layer: {}'.format(layer.__class__.__name__))
+                raise RuntimeError("Unrecognized layer: {}".format(layer.__class__.__name__))
 
             model.add_module(name, layer)
 
             if name in self.content_layers:
                 # add content loss:
-                target = model(self.content_image).detach()
-                content_loss = ContentLoss(target)
+                content_feature = model(content_img).detach()
+                content_loss = ContentLoss(content_feature)
                 model.add_module("content_loss_{}".format(i), content_loss)
-                content_losses.append(content_loss)
-                del target
-                del content_loss
-                gc.collect()
+                self.content_losses.append(content_loss)
 
             if name in self.style_layers:
                 # add style loss:
-                target_feature = model(self.style_image).detach()
-                style_loss = StyleLoss(target_feature)
+                style_feature = model(style_img).detach()
+                style_loss = StyleLoss(style_feature)
                 model.add_module("style_loss_{}".format(i), style_loss)
-                style_losses.append(style_loss)
-                del style_loss
-                del target_feature
-                gc.collect()
+                self.style_losses.append(style_loss)
 
-        # now we trim off the layers after the last content and style losses
-        # выбрасываем все уровни после последенего styel loss или content loss
-        for i in range(len(model) - 1, -1, -1):
-            if isinstance(model[i], ContentLoss) or isinstance(model[i], StyleLoss):
-                break
+        self.model = model
 
-        model = model[:(i + 1)]
-        del cnn
-        gc.collect()
-
-        return model, style_losses, content_losses
-
-    @staticmethod
-    def get_input_optimizer(input_image):
-        # this line to show that input is a parameter that requires a gradient
-        #добоваляет содержимое тензора катринки в список изменяемых оптимизатором параметров
-        optimizer = LBFGS([input_image.requires_grad_()])
-        return optimizer
-
-    def run_style_transfer(self, input_image):
-        """Run the style transfer."""
-        print('Building the style transfer model..')
-        model, style_losses, content_losses = self.get_style_model_and_losses()
-        optimizer = self.get_input_optimizer(input_image)
+    def run(self, num_steps):
+        """Run the style transfer"""
 
         def closure():
             # correct the values
-            # это для того, чтобы значения тензора картинки не выходили за пределы [0;1]
-            input_image.data.clamp_(0, 1)
+            input_img.data.clamp_(0, 1)
 
             optimizer.zero_grad()
 
-            model(input_image)
+            self.model(input_img)
 
-            style_score = 0
             content_score = 0
+            style_score = 0
 
-            for sl in style_losses:
-                style_score += sl.loss
-            for cl in content_losses:
+            for cl in self.content_losses:
                 content_score += cl.loss
+            # weighing loss on the content
+            content_score *= content_weight
 
-            # взвешивание ощибки
-            style_score *= self.style_weight
-            content_score *= self.content_weight
+            for sl in self.style_losses:
+                style_score += sl.loss
+            # weighing loss on the style
+            style_score *= style_weight
 
-            loss = style_score + content_score
+            loss = content_score + style_score
             loss.backward()
 
-            run[0] += 1
-            if run[0] % 5 == 0:
-                print("run {}:".format(run))
-                print('Style Loss : {:4f} Content Loss: {:4f}'.format(
-                    style_score.item(), content_score.item()))
-                print()
-            gc.collect()
-            return style_score + content_score
+            self.step += 1
+            if self.step % 5 == 0:
+                style_score_val = style_score.item()
+                print(log_pattern.format(self.step, content_score.item(), style_score_val))
 
-        print('Optimizing..')
-        run = [0]
-        while run[0] <= self.num_steps:
+                k = (self.prev_score + smooth) / (style_score_val + smooth)
+                if abs(1 - k) > eps:
+                    self.prev_score = style_score_val
+                else:
+                    self.step = 1e10
 
-            gc.collect()
+            return loss
+
+        content_weight, style_weight = 1, 1e5
+        log_pattern = "Step: {}\tContent Loss: {:.4f} Style Loss: {:.4f}"
+        eps = 2e-1
+        smooth = 1e-4
+
+        self.prev_score = float("inf")
+
+        input_img = self.content_img.clone().detach()
+        # this line to show that input is a parameter that requires a gradient
+        optimizer = LBFGS([input_img.requires_grad_()])
+
+        self.step = 1
+        while self.step < num_steps:
             optimizer.step(closure)
 
-        input_image.data.clamp_(0, 1)
-        return input_image
+        # a last correction...
+        input_img.data.clamp_(0, 1)
 
+        return input_img.detach()
