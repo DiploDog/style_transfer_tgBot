@@ -25,7 +25,7 @@ async def show_menu(message: Message):
     )
 
 
-@dp.message_handler(commands=['сюда'], state='*')
+@dp.message_handler(commands=['here'], state='*')
 async def error_message(message: Message):
     if not os.path.isfile('images/result.jpg'):
         await message.answer(
@@ -78,8 +78,7 @@ async def process_transfer(message: Message, state: FSMContext):
         emojize('Обработка Вашего фото началсь!\n'
                 'Обычно это занимает от 10 до 15 минут.\n'
                 'Пожалуйста, наберитесь терпения :point_right::point_left:\n'
-                'Нажмите /сюда и в случае, если случится сбой\n'
-                'я Вас обязательно об этом оповещу!'),
+                'Нажмите /here и в случае, если случится сбой, я Вас обязательно об этом оповещу!'),
         reply_markup=ReplyKeyboardRemove()
     )
     if os.path.isfile('images/result.jpg'):
