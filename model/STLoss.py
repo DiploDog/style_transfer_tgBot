@@ -11,7 +11,7 @@ class ContentLoss(nn.Module):
         # to dynamically compute the gradient: this is a stated value,
         # not a variable. Otherwise the forward method of the criterion
         # will throw an error.
-        self.target = target.detach()  # это константа. Убираем ее из дерева вычеслений
+        self.target = target.detach()
         self.loss = F.mse_loss(self.target, self.target)  # to initialize with something
 
     def forward(self, input):

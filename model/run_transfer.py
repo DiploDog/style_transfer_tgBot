@@ -5,11 +5,10 @@ from model.preprocessing import Preprocessing
 
 
 def run(content_image, style_image, num_steps=100):
-    style_img = Preprocessing(imsize=512, img=style_image)  # as well as here
+    style_img = Preprocessing(imsize=512, img=style_image)
     content_img = Preprocessing(imsize=512, img=content_image)
     tens_content = content_img.image_loader()
     tens_style = style_img.image_loader()
-    input_img = tens_content.clone()
     my_model = GatysNet()
     my_model.load_state_dict(torch.load('model/Gatys.model'))
     transfer = GatysTransfer(my_model.features.eval())

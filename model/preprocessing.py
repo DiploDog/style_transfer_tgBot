@@ -12,7 +12,7 @@ class Preprocessing:
 
     def image_loader(self):
         loader = transforms.Compose([
-            transforms.Resize(self.imsize),  # нормируем размер изображения
+            transforms.Resize(self.imsize),
             transforms.CenterCrop(self.imsize),
             transforms.ToTensor()])
         image = Image.open(self.img)

@@ -1,5 +1,7 @@
 from environs import Env
 
+# In case you want to run bot on your own local device
+
 env = Env()
 env.read_env()
 

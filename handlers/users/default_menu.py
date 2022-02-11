@@ -11,7 +11,11 @@ from model import run_transfer
 import os
 
 
+# Main menu handlers for its messages processing
+
+
 class Form(StatesGroup):
+    """States for the FSM"""
     style = State()
     content = State()
     transfer = State()
@@ -27,6 +31,7 @@ async def show_menu(message: Message):
 
 @dp.message_handler(commands=['here'], state='*')
 async def error_message(message: Message):
+    """In case there's lack of memory on server"""
     if not os.path.isfile('images/result.jpg'):
         await message.answer(
             'Боту не хватило ресурсов.\n'
@@ -50,7 +55,7 @@ async def start_transfer(message: Message):
 async def get_style(message: ContentType.PHOTO, state: FSMContext):
     await state.get_data()
     file_id = message.photo[-1].file_id
-    await state.update_data(style_id=file_id)
+    await state.update_data(style_id=file_id)  # filling the dict-like of FSM
     await message.answer('Отлично! Теперь фото, для которого предназначается изменение стиля')
     await Form.content.set()
 
@@ -72,6 +77,7 @@ async def process_transfer(message: Message, state: FSMContext):
     data = await state.get_data()
     content = data.get('content_id')
     style = data.get('style_id')
+    # Downloading images to the RAM
     await bot.download_file_by_id(content, 'images/content.jpg')
     await bot.download_file_by_id(style, 'images/style.jpg')
     await message.answer(
@@ -81,8 +87,11 @@ async def process_transfer(message: Message, state: FSMContext):
                 'Нажмите /here и в случае, если случится сбой, я Вас обязательно об этом оповещу!'),
         reply_markup=ReplyKeyboardRemove()
     )
+    # in case there's an error and transfer did not completed
+    # the error_message func will be turned on
     if os.path.isfile('images/result.jpg'):
         os.remove('images/result.jpg')
+
     run_transfer.run('images/content.jpg', 'images/style.jpg')
     await bot.send_photo(message.chat.id, InputFile('images/result.jpg'), caption='Готово!')
     await state.finish()
